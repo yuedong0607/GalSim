@@ -24,12 +24,17 @@ Roman ST bandpasses.
 
 import numpy as np
 import os
+from astropy.io import ascii
 
 from .. import meta_data
 from ..errors import galsim_warn
 from .. import Bandpass, LookupTable
 
-def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=False, **kwargs):
+band_name_map = {"F062": "R062", "F087": "Z087", "F106": "Y106", "F129": "J129",
+                 "F158": "H158", "F146": "W146", "F213": "K213", "Prism": "SNPrism"}
+
+
+def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=False, SCA_ID=None, **kwargs):
     """Utility to get a dictionary containing the Roman ST bandpasses used for imaging.
 
     This routine reads in a file containing a list of wavelengths and throughput for all Roman
@@ -103,14 +108,25 @@ def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=
     """
     from . import collecting_area, non_imaging_bands
 
-    # Begin by reading in the file containing the info.
-    datafile = os.path.join(meta_data.share_dir, "roman", "Roman_effarea_20210614.txt")
-    # One line with the column headings, and the rest as a NumPy array.
-    data = np.genfromtxt(datafile, names=True)
-    wave = 1000.*data['Wave']
+    if SCA_ID is None:
+        # Begin by reading in the file containing the info.
+        datafile = os.path.join(meta_data.share_dir, "roman",
+                                "Roman_effarea_20210614.txt")
+        # One line with the column headings, and the rest as a NumPy array.
+        data = np.genfromtxt(datafile, names=True)
+    else:
+        sca_id = 'SCA%02d' % (int(SCA_ID))
+        datafile = os.path.join(meta_data.share_dir, "roman", "EffectiveAreas",
+                                "Roman_effarea_v8_%s_20240301.ecsv" % (sca_id))
+        data = ascii.read(datafile)
+        for index, bp_name in enumerate(data.dtype.names[1:]):
+            if bp_name in band_name_map:
+                data.rename_column(bp_name, band_name_map[bp_name])
 
+    wave = 1000.*data['Wave']
     # Read in and manipulate the sky background info.
-    sky_file = os.path.join(meta_data.share_dir, "roman", "roman_sky_backgrounds.txt")
+    sky_file = os.path.join(meta_data.share_dir, "roman",
+                            "roman_sky_backgrounds.txt")
     sky_data = np.loadtxt(sky_file).transpose()
     ecliptic_lat = sky_data[0, :]
     ecliptic_lon = sky_data[1, :]
@@ -133,7 +149,7 @@ def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=
             if key in thin_kwargs:
                 tmp_thin_dict[key] = kwargs.pop(key)
         if len(kwargs) != 0:
-            raise TypeError("Unknown kwargs: %s"%(' '.join(kwargs.keys())))
+            raise TypeError("Unknown kwargs: %s" % (' '.join(kwargs.keys())))
 
     # Set up a dictionary.
     bandpass_dict = {}
@@ -145,7 +161,8 @@ def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=
         # Initialize the bandpass object.
         # Convert effective area units from m^2 to cm^2.
         # Also divide by the nominal Roman collecting area to get a dimensionless throughput.
-        bp = Bandpass(LookupTable(wave, data[bp_name] * 1.e4/collecting_area), wave_type='nm')
+        bp = Bandpass(LookupTable(
+            wave, data[bp_name] * 1.e4/collecting_area), wave_type='nm')
 
         # Use any arguments related to truncation, thinning, etc.
         if len(tmp_truncate_dict) > 0 or default_thin_trunc:
