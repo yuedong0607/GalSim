@@ -19,25 +19,31 @@
 The galsim.roman module, containing information GalSim needs to simulate images for the Roman
 Space Telescope.
 """
+
 import os
+
 import numpy as np
-from .. import meta_data, Image
 from astropy.io import ascii
+
+from .. import Image, meta_data
 
 roman_tech_repo_path = "/hpc/home/yf194/Work/projects/roman-technical-information/"
 FPSPerformance_path = os.path.join(
-    roman_tech_repo_path, 'data', 'WideFieldInstrument', 'FPSPerformance')
+    roman_tech_repo_path, "data", "WideFieldInstrument", "FPSPerformance"
+)
 
 # Summary files for Roman/WFI Focal Plane System (FPS) Sensor Chip Assembly (SCA) Performance Measurements
-CDS_summary = os.path.join(FPSPerformance_path, 'WFI_CDS_Noise_summary.ecsv')
+CDS_summary = os.path.join(FPSPerformance_path, "WFI_CDS_Noise_summary.ecsv")
 dark_current_summary = os.path.join(
-    FPSPerformance_path, "WFI_Dark_current_summary.ecsv")
-persistence_summary = os.path.join(
-    FPSPerformance_path, "WFI_Persistence_summary.ecsv")
+    FPSPerformance_path, "WFI_Dark_current_summary.ecsv"
+)
+persistence_summary = os.path.join(FPSPerformance_path, "WFI_Persistence_summary.ecsv")
 persistence_exp_fits_summary = os.path.join(
-    FPSPerformance_path, "WFI_Persistence_exp_fits.ecsv")
+    FPSPerformance_path, "WFI_Persistence_exp_fits.ecsv"
+)
 pixel_meet_requirements_summary = os.path.join(
-    FPSPerformance_path, "WFI_Pixels_meet_requirements.ecsv")
+    FPSPerformance_path, "WFI_Pixels_meet_requirements.ecsv"
+)
 QE_summary = os.path.join(FPSPerformance_path, "WFI_Quantum_efficiency.ecsv")
 total_noise_summary = os.path.join(FPSPerformance_path, "WFI_Total_noise.ecsv")
 
@@ -48,33 +54,37 @@ obscuration = 0.32
 collecting_area = 3.757e4  # cm^2, from Cycle 7
 exptime = 139.8  # s
 dark_current = 0.015  # e-/pix/s
-nonlinearity_beta = -6.e-7
+nonlinearity_beta = -6.0e-7
 reciprocity_alpha = 0.0065
 read_noise = 8.5  # e-
 n_dithers = 6
+nborder = 4  # number of border pixels used for reference pixels.
 
 # Dark current
 # Columns in the summary file: ['SCU', 'SCA', 'Dark Current - Median', 'Dark Current - Mean', 'Percentage Passing Requirement']
 # The 18th (counting from 0) row: All detectors (MAP)
 try:
     data = ascii.read(dark_current_summary)
-    dark_current = data[18]['Dark Current - Median']
+    dark_current = data[18]["Dark Current - Median"]
 except:
-    print("Failed to fetch WFI_Dark_current_summary.ecsv, use default value for dark_current")
+    print(
+        "Failed to fetch WFI_Dark_current_summary.ecsv, use default value for dark_current"
+    )
 
 # These are from https://roman.gsfc.nasa.gov/science/WFI_technical.html, as of October, 2023
-thermal_backgrounds = {'R062': 0.00,  # e-/pix/s
-                       'Z087': 0.00,
-                       'Y106': 0.00,
-                       'J129': 0.00,
-                       'H158': 0.04,
-                       'F184': 0.17,
-                       'K213': 4.52,
-                       'W146': 0.98,
-                       'SNPrism': 0.00,
-                       'Grism_0thOrder': 0.00,
-                       'Grism_1stOrder': 0.00,
-                       }
+thermal_backgrounds = {
+    "R062": 0.00,  # e-/pix/s
+    "Z087": 0.00,
+    "Y106": 0.00,
+    "J129": 0.00,
+    "H158": 0.04,
+    "F184": 0.17,
+    "K213": 4.52,
+    "W146": 0.98,
+    "SNPrism": 0.00,
+    "Grism_0thOrder": 0.00,
+    "Grism_1stOrder": 0.00,
+}
 
 # Physical pixel size
 pixel_scale_mm = 0.01  # mm
@@ -85,8 +95,7 @@ pixel_scale_mm = 0.01  # mm
 # filter.  This file is for SCA2, which is near the center and for short wavelengths, so in
 # some sense the most typical example of the pupil mask.  If anyone needs a generic pupil
 # plane file to use, this one should be fine.
-pupil_plane_file = os.path.join(
-    meta_data.share_dir, 'roman', 'SCA2_rim_mask.fits.gz')
+pupil_plane_file = os.path.join(meta_data.share_dir, "roman", "SCA2_rim_mask.fits.gz")
 
 # The pupil plane files all keep track of their correct pixel scale, but for the exit pupil,
 # rather than the input pupil.  The scaling to use to get to the entrance pupil, which is what
@@ -95,30 +104,52 @@ pupil_plane_scale = 0.00111175097
 
 # Which bands should use the long vs short pupil plane files for the PSF.
 # F184, K213
-longwave_bands = ['F184', 'K213']
+longwave_bands = ["F184", "K213"]
 # R062, Z087, Y106, J129, H158, W146, SNPrism, Grism_0thOrder, Grism_1stOrder.
 # Note that the last three are not imaging bands.
-non_imaging_bands = ['Grism_0thOrder', 'Grism_1stOrder', 'SNPrism']
-shortwave_bands = ['R062', 'Z087', 'Y106', 'J129', 'H158', 'W146'] \
-    + non_imaging_bands
+non_imaging_bands = ["Grism_0thOrder", "Grism_1stOrder", "SNPrism"]
+shortwave_bands = [
+    "R062",
+    "Z087",
+    "Y106",
+    "J129",
+    "H158",
+    "W146",
+] + non_imaging_bands
 
 stray_light_fraction = 0.1
 
 # IPC kernel is unnormalized at first.  We will normalize it.
-ipc_kernel = np.array([[0.001269938, 0.015399776, 0.001199862],
-                       [0.013800177, 1.0, 0.015600367],
-                       [0.001270391, 0.016129619, 0.001200137]])
+ipc_kernel = np.array(
+    [
+        [0.001269938, 0.015399776, 0.001199862],
+        [0.013800177, 1.0, 0.015600367],
+        [0.001270391, 0.016129619, 0.001200137],
+    ]
+)
 ipc_kernel /= np.sum(ipc_kernel)
 ipc_kernel = Image(ipc_kernel)
 
-persistence_coefficients = np.array(
-    [0.045707683, 0.014959818, 0.009115737, 0.00656769, 0.005135571, 0.004217028, 0.003577534, 0.003106601])/100.
+persistence_coefficients = (
+    np.array(
+        [
+            0.045707683,
+            0.014959818,
+            0.009115737,
+            0.00656769,
+            0.005135571,
+            0.004217028,
+            0.003577534,
+            0.003106601,
+        ]
+    )
+    / 100.0
+)
 
 # parameters in the fermi model = [ A, x0, dx, a, r, half_well]
 # The following parameters are for H4RG-lo, the conservative model for low influence level x.
 # The info and implementation can be found in roman_detectors.applyPersistence() and roman_detectors.fermi_linear().
-persistence_fermi_parameters = np.array(
-    [0.017, 60000., 50000., 0.045, 1., 50000.])
+persistence_fermi_parameters = np.array([0.017, 60000.0, 50000.0, 0.045, 1.0, 50000.0])
 
 n_sca = 18
 n_pix_tot = 4096
@@ -127,11 +158,12 @@ jitter_rms = 0.014
 charge_diffusion = 0.1
 
 # Maxinum allowed angle from the telecope solar panels to the sun in degrees.
-max_sun_angle = 36.
+max_sun_angle = 36.0
 
-from .roman_bandpass import getBandpasses
+from .nonlinarity import Nonlinearity
 from .roman_backgrounds import getSkyLevel
-from .roman_psfs import getPSF
-from .roman_wcs import getWCS, findSCA, allowedPos, bestPA, convertCenter
+from .roman_bandpass import getBandpasses
 from .roman_detectors import applyNonlinearity, addReciprocityFailure, applyIPC, applyPersistence, allDetectorEffects, NLfunc
+from .roman_psfs import getPSF
+from .roman_wcs import allowedPos, bestPA, convertCenter, findSCA, getWCS
 from . import roman_config

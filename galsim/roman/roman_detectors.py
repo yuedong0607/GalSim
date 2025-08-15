@@ -23,20 +23,31 @@ defects that are specific to Roman.
 """
 
 import numpy as np
-import os
 
-from . import exptime, persistence_coefficients, nonlinearity_beta
-from . import dark_current, read_noise, gain
-from . import reciprocity_alpha
-from . import ipc_kernel
-from . import persistence_fermi_parameters
-
-from .. import BaseDeviate, PoissonNoise, DeviateNoise, GaussianNoise, PoissonDeviate
-from .. import GalSimValueError
+from .. import (
+    BaseDeviate,
+    DeviateNoise,
+    GalSimValueError,
+    GaussianNoise,
+    PoissonDeviate,
+    PoissonNoise,
+)
+from . import (
+    dark_current,
+    exptime,
+    gain,
+    ipc_kernel,
+    nonlinearity_beta,
+    persistence_coefficients,
+    persistence_fermi_parameters,
+    read_noise,
+    reciprocity_alpha,
+)
 
 
 def NLfunc(x):
-    return x + nonlinearity_beta*(x**2)
+    return x + nonlinearity_beta * (x**2)
+
 
 def applyNonlinearity(img):
     """
@@ -54,8 +65,12 @@ def applyNonlinearity(img):
     """
     img.applyNonlinearity(NLfunc=NLfunc)
 
+
 def addReciprocityFailure(img, exptime=exptime):
-    img.addReciprocityFailure(exp_time=exptime, alpha=reciprocity_alpha, base_flux=1.0)
+    img.addReciprocityFailure(
+        exp_time=exptime, alpha=reciprocity_alpha, base_flux=1.0
+    )
+
 
 # Note: Formatted doc strings don't work if put in the normal place.  Unless the function is
 # actually called, the formatting statement is never executed.  So put it here instead.
@@ -77,7 +92,7 @@ Parameters:
 """.format(exptime=exptime)
 
 
-def applyIPC(img, edge_treatment='extend', fill_value=None):
+def applyIPC(img, edge_treatment="extend", fill_value=None):
     """
     Applies the effect of interpixel capacitance (IPC) to the Image instance.
 
@@ -96,30 +111,41 @@ def applyIPC(img, edge_treatment='extend', fill_value=None):
                             original pixel values are retained at the edges. If
                             edge_treatment is not 'crop', then this is ignored.
     """
-    img.applyIPC(ipc_kernel, edge_treatment=edge_treatment, fill_value=fill_value)
+    img.applyIPC(
+        ipc_kernel, edge_treatment=edge_treatment, fill_value=fill_value
+    )
 
-def applyPersistence(img, prev_exposures, method='fermi'):
-    if not hasattr(prev_exposures,'__iter__'):
-        raise TypeError("In roman.applyPersistence, prev_exposures must be a list of Image instances")
 
-    if method == 'linear':
+def applyPersistence(img, prev_exposures, method="fermi"):
+    if not hasattr(prev_exposures, "__iter__"):
+        raise TypeError(
+            "In roman.applyPersistence, prev_exposures must be a list of Image instances"
+        )
 
-        n_exp = min(len(prev_exposures),len(persistence_coefficients))
-        img.applyPersistence(prev_exposures[:n_exp], persistence_coefficients[:n_exp])
+    if method == "linear":
+        n_exp = min(len(prev_exposures), len(persistence_coefficients))
+        img.applyPersistence(
+            prev_exposures[:n_exp], persistence_coefficients[:n_exp]
+        )
 
-    elif method == 'fermi':
-
+    elif method == "fermi":
         n_exp = len(prev_exposures)
         for i in range(n_exp):
             # The slew/settle time and the reset time should be specified.
             # Now we simply assume them as 0 and take the persitence current at the mid-time of
             # exposures as the average persistence until we get more information about the
             # observation timeline.
-            img.array[:,:] += fermi_linear(prev_exposures[i].array, (0.5+i)*exptime)*exptime
+            img.array[:, :] += (
+                fermi_linear(prev_exposures[i].array, (0.5 + i) * exptime)
+                * exptime
+            )
 
     else:
-        raise GalSimValueError("applyPersistence only accepts 'linear' or 'fermi' methods, got",
-                               method)
+        raise GalSimValueError(
+            "applyPersistence only accepts 'linear' or 'fermi' methods, got",
+            method,
+        )
+
 
 # Again, need to put the doc outside the function to get formatting to work.
 applyPersistence.__doc__ = """
@@ -170,21 +196,32 @@ def fermi_linear(x, t):
     y = np.zeros_like(x)
 
     A, x0, dx, a, r, half_well = persistence_fermi_parameters
-    ps    = A* (    x    /x0)**a * (t/1000.)**(-r)/(np.exp( -(x-x0)/dx) +1.)
-    ps_hf = A* (half_well/x0)**a * (t/1000.)**(-r)/(np.exp( -(half_well-x0)/dx) +1.)
+    ps = (
+        A
+        * (x / x0) ** a
+        * (t / 1000.0) ** (-r)
+        / (np.exp(-(x - x0) / dx) + 1.0)
+    )
+    ps_hf = (
+        A
+        * (half_well / x0) ** a
+        * (t / 1000.0) ** (-r)
+        / (np.exp(-(half_well - x0) / dx) + 1.0)
+    )
 
     mask1 = x > half_well
-    mask2 = (x > 0.) & (x <= half_well)
+    mask2 = (x > 0.0) & (x <= half_well)
 
     y[mask1] += ps[mask1]
-    y[mask2] += ps_hf*x[mask2]/half_well
+    y[mask2] += ps_hf * x[mask2] / half_well
 
     return y
+
 
 # Again, need to put the doc outside the function to get formatting to work.
 def allDetectorEffects(img, prev_exposures=(), rng=None, exptime=exptime):
     # Make sure we don't have any negative values.
-    img.replaceNegative(0.)
+    img.replaceNegative(0.0)
 
     # Add Poisson noise.
     rng = BaseDeviate(rng)
@@ -198,13 +235,13 @@ def allDetectorEffects(img, prev_exposures=(), rng=None, exptime=exptime):
     addReciprocityFailure(img, exptime=exptime)
 
     # Dark current (use exposure time).
-    total_dark_current = dark_current*exptime
+    total_dark_current = dark_current * exptime
     dark_noise = DeviateNoise(PoissonDeviate(rng, total_dark_current))
     img.addNoise(dark_noise)
 
     # Persistence (use Roman H4RG-lo fermi model)
     prev_exposures = list(prev_exposures)
-    applyPersistence(img, prev_exposures, method='fermi')
+    applyPersistence(img, prev_exposures, method="fermi")
     # Update the 'prev_exposures' queue.
     prev_exposures = [img.copy()] + prev_exposures[:]
 
@@ -225,6 +262,7 @@ def allDetectorEffects(img, prev_exposures=(), rng=None, exptime=exptime):
     img.quantize()
 
     return prev_exposures
+
 
 allDetectorEffects.__doc__ = """
 This utility applies all sources of noise and detector effects for Roman that are implemented
@@ -250,4 +288,3 @@ Parameters:
 Returns:
     prev_exposures: Updated list of previous exposures Image instances.
 """.format(exptime=exptime)
-
