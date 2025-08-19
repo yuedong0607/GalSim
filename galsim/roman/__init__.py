@@ -160,7 +160,51 @@ charge_diffusion = 0.1
 # Maxinum allowed angle from the telecope solar panels to the sun in degrees.
 max_sun_angle = 36.0
 
+default_parameters_dictionary = {
+    "instrument": {
+        "name": "WFI",
+        "detector": "WFI07",
+        "optical_element": "F184",
+    },
+    # "ephemeris": {
+    #     "time": Time("2026-01-01").mjd,
+    #     "spatial_x": 0.0,
+    #     "spatial_y": 0.0,
+    #     "spatial_z": 0.0,
+    #     "velocity_x": 0.0,
+    #     "velocity_y": 0.0,
+    #     "velocity_z": 0.0,
+    # },
+    # "exposure": {
+    #     "start_time": Time("2026-01-01T00:00:00"),
+    #     "type": "WFI_IMAGE",
+    #     "ma_table_number": 4,
+    #     "read_pattern": read_pattern[4],
+    #     # Changing the default MA table to be 4 (C2A_IMG_HLWAS) as MA table 1 (DEFOCUS_MOD) is not supported
+    # },
+    # "pointing": {
+    #     "target_ra": 270.0,
+    #     "target_dec": 66.0,
+    #     "target_aperture": "WFI_CEN",
+    #     "pa_aperture": 0.0,
+    # },
+    # "velocity_aberration": {"scale_factor": 1.0},
+    # "wcsinfo": {
+    #     "aperture_name": "WFI_CEN",
+    #     "ra_ref": 270.0,
+    #     "dec_ref": 66.0,
+    #     "v2_ref": 0,
+    #     "v3_ref": 0,
+    #     "roll_ref": 0,
+    #     "vparity": -1,
+    #     "v3yangle": -60.0,
+    #     # I don't know what vparity and v3yangle should really be,
+    #     # but they are always -1 and -60 in existing files.
+    # },
+}
+
 from .nonlinarity import Nonlinearity
+from .saturation import Saturation
 from .roman_backgrounds import getSkyLevel
 from .roman_bandpass import getBandpasses
 from .roman_detectors import applyNonlinearity, addReciprocityFailure, applyIPC, applyPersistence, allDetectorEffects, NLfunc

@@ -2,54 +2,10 @@ import asdf
 import crds
 import numpy as np
 import roman_datamodels
-import psutil, os
 
 from astropy import units as u
 
-from . import gain, nborder, nonlinearity_beta
-
-default_parameters_dictionary = {
-    "instrument": {
-        "name": "WFI",
-        "detector": "WFI07",
-        "optical_element": "F184",
-    },
-    # "ephemeris": {
-    #     "time": Time("2026-01-01").mjd,
-    #     "spatial_x": 0.0,
-    #     "spatial_y": 0.0,
-    #     "spatial_z": 0.0,
-    #     "velocity_x": 0.0,
-    #     "velocity_y": 0.0,
-    #     "velocity_z": 0.0,
-    # },
-    # "exposure": {
-    #     "start_time": Time("2026-01-01T00:00:00"),
-    #     "type": "WFI_IMAGE",
-    #     "ma_table_number": 4,
-    #     "read_pattern": read_pattern[4],
-    #     # Changing the default MA table to be 4 (C2A_IMG_HLWAS) as MA table 1 (DEFOCUS_MOD) is not supported
-    # },
-    # "pointing": {
-    #     "target_ra": 270.0,
-    #     "target_dec": 66.0,
-    #     "target_aperture": "WFI_CEN",
-    #     "pa_aperture": 0.0,
-    # },
-    # "velocity_aberration": {"scale_factor": 1.0},
-    # "wcsinfo": {
-    #     "aperture_name": "WFI_CEN",
-    #     "ra_ref": 270.0,
-    #     "dec_ref": 66.0,
-    #     "v2_ref": 0,
-    #     "v3_ref": 0,
-    #     "roll_ref": 0,
-    #     "vparity": -1,
-    #     "v3yangle": -60.0,
-    #     # I don't know what vparity and v3yangle should really be,
-    #     # but they are always -1 and -60 in existing files.
-    # },
-}
+from . import gain, nborder, nonlinearity_beta, default_parameters_dictionary
 
 
 # def print_ram_usage(message=""):
@@ -69,7 +25,8 @@ class Nonlinearity(object):
         self.gain = gain
         self.usecrds = usecrds
         self.metadata = metadata
-        self._get_crds_model(metadata=self.metadata)
+        if self.usecrds:
+            self._get_crds_model(metadata=self.metadata)
 
     def _get_crds_model(self, metadata=None):
         image_mod = roman_datamodels.datamodels.ImageModel.create_fake_data()
@@ -226,3 +183,4 @@ class Nonlinearity(object):
                     img_arr, self.crds_coeffs, reversed
                 )
             img.array = img_arr
+        return img
