@@ -41,6 +41,8 @@ class Saturation(object):
             img.array[where_sat] = saturation_array[where_sat]
         else:
             # The CRDS saturation references is in DN
+            # Resultants exceeding the saturation level are clipped at the saturation level and marked as saturated.
+            
             # [from roman_imsim] this maybe should be better applied at read time?
             # it's not actually clear to me what the right thing to do
             # is in detail.
