@@ -7,6 +7,8 @@ from astropy import units as u
 
 from . import gain, nborder, nonlinearity_beta, default_parameters_dictionary
 
+__all__ = ["NLfunc", "Nonlinearity"]
+
 
 # def print_ram_usage(message=""):
 #     process = psutil.Process(os.getpid())
@@ -29,6 +31,10 @@ class Nonlinearity(object):
             self._get_crds_model(metadata=self.metadata)
 
     def _get_crds_model(self, metadata=None):
+        # Inverse linearity reference files are used to apply the
+        # effect of classical non-linearity when constructing
+        # L1 files, and linearity reference files are used to
+        # remove it when constructing L2 files.
         image_mod = roman_datamodels.datamodels.ImageModel.create_fake_data()
         meta = image_mod.meta
         meta["wcs"] = None
@@ -51,13 +57,14 @@ class Nonlinearity(object):
             self.crds_coeffs = self._repair_coefficients(
                 coeffs=f["roman"]["coeffs"][
                     :, nborder:-nborder, nborder:-nborder
-                ].copy()
+                ].copy(),
+                dq=f["roman"]["dq"][nborder:-nborder, nborder:-nborder].copy(),
             )
 
         with asdf.open(ref_file["gain"]) as f:
             self.gain = f["roman"]["data"][nborder:-nborder, nborder:-nborder].copy()
 
-    def _repair_coefficients(self, coeffs, dq=None):
+    def _repair_coefficients(self, coeffs, dq):
         """Fix cases of zeros and NaNs in non-linearity coefficients.
 
         This function replaces suspicious-looking non-linearity coefficients
