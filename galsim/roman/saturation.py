@@ -5,6 +5,8 @@ import roman_datamodels
 from astropy import units as u
 from . import nborder, default_parameters_dictionary
 
+__all__ = ["Saturation"]
+
 
 class Saturation(object):
     def __init__(self, usecrds=False, metadata=None, saturation_level=100000):
@@ -31,7 +33,9 @@ class Saturation(object):
             observatory="roman",
         )
         with asdf.open(ref_file["saturation"]) as f:
-            self.saturation_map = f["roman"]["data"][nborder:-nborder, nborder:-nborder].copy()
+            self.saturation_map = f["roman"]["data"][
+                nborder:-nborder, nborder:-nborder
+            ].copy()
         self.saturation_map *= u.DN
 
     def apply(self, img):
@@ -41,14 +45,15 @@ class Saturation(object):
             img.array[where_sat] = saturation_array[where_sat]
         else:
             # The CRDS saturation references is in DN
-            # Resultants exceeding the saturation level are clipped at the saturation level and marked as saturated.
-            
-            # [from roman_imsim] this maybe should be better applied at read time?
-            # it's not actually clear to me what the right thing to do
-            # is in detail.
+            # Resultants exceeding the saturation level are clipped at
+            # the saturation level and marked as saturated.
+
+            # [from roman_imsim] this maybe should be better applied at
+            # read time? it's not actually clear to me what the right
+            # thing to do is in detail.
             if not isinstance(img, u.Quantity):
                 img *= u.DN
-            img = np.clip(img, 0 * u.DN, self.saturation_map)
+            img = np.clip(img, 0 * u.DN, self.saturation_map, out=img)
 
             # m = resultants >= saturation
             # dq[m] |= parameters.dqbits['saturated']
