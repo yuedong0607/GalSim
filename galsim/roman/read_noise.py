@@ -7,6 +7,8 @@ import roman_datamodels
 from astropy import units as u
 from . import read_noise, nborder, default_parameters_dictionary
 
+__all__ = ["ReadNoise"]
+
 
 class ReadNoise(object):
     def __init__(self, usecrds=False, metadata=None, rng=None, seed=None):
