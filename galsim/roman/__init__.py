@@ -480,6 +480,7 @@ default_parameters_dictionary = {
     },
 }
 
+from .gain import Gain
 from .dark_current import DarkCurrent
 from .nonlinarity import Nonlinearity
 from .saturation import Saturation
