@@ -480,11 +480,11 @@ default_parameters_dictionary = {
     },
 }
 
-from .gain import Gain
-from .dark_current import DarkCurrent
-from .nonlinarity import Nonlinearity
-from .saturation import Saturation
-from .read_noise import ReadNoise
+from .roman_gain import Gain
+from .roman_dark_current import DarkCurrent
+from .roman_nonlinarity import Nonlinearity
+from .roman_saturation import Saturation
+from .roman_read_noise import ReadNoise
 from .roman_backgrounds import getSkyLevel
 from .roman_bandpass import getBandpasses
 from .roman_detectors import (
