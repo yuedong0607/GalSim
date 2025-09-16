@@ -30,13 +30,14 @@ from astropy.io import ascii
 from .. import meta_data
 from ..errors import galsim_warn
 from .. import Bandpass, LookupTable
+from . import roman_tech_repo_path
 
 band_name_map = {"F062": "R062", "F087": "Z087", "F106": "Y106", "F129": "J129",
                  "F158": "H158", "F146": "W146", "F213": "K213", "Prism": "SNPrism"}
 
-roman_tech_repo_path = "/hpc/home/yf194/Work/projects/roman-technical-information/"
-effarea_zip_file = os.path.join(
-    roman_tech_repo_path, 'data/WideFieldInstrument/Imaging/EffectiveAreas/Roman_effarea_tables_20240327.zip')
+# effarea_zip_file = os.path.join(
+#     roman_tech_repo_path, 'data/WideFieldInstrument/Imaging/EffectiveAreas/Roman_effarea_tables_20240327.zip')
+effarea_root = os.path.join(roman_tech_repo_path, "data/WideFieldInstrument/Imaging/EffectiveAreas/")
 
 
 def get_zodi_bkgnd(ecl_lat, ecl_dlon, lambda_min, lambda_max, Tlambda, T):
@@ -275,8 +276,9 @@ def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=
         # datafile = os.path.join(meta_data.share_dir, "roman", "EffectiveAreas",
         #                         "Roman_effarea_v8_%s_20240301.ecsv" % (sca_id))
 
-        zfile = zipfile.ZipFile(effarea_zip_file, 'r')
-        datafile = zfile.open("Roman_effarea_v8_%s_20240301.ecsv" % (sca_id))
+        # zfile = zipfile.ZipFile(effarea_zip_file, 'r')
+        # datafile = zfile.open("Roman_effarea_v8_%s_20240301.ecsv" % (sca_id))
+        datafile = os.path.join(effarea_root, "Roman_effarea_v8_%s_20240301.ecsv" % (sca_id))
         data = ascii.read(datafile)
         for index, bp_name in enumerate(data.dtype.names[1:]):
             if bp_name in band_name_map:
