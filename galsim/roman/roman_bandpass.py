@@ -22,22 +22,20 @@ Part of the Roman Space Telescope module.  This file includes any routines neede
 Roman ST bandpasses.
 """
 
-import numpy as np
 import os
-import zipfile
+
+import numpy as np
 from astropy.io import ascii
 
-from .. import meta_data
+from .. import Bandpass, LookupTable, meta_data
 from ..errors import galsim_warn
-from .. import Bandpass, LookupTable
-from . import roman_tech_repo_path
-
-band_name_map = {"F062": "R062", "F087": "Z087", "F106": "Y106", "F129": "J129",
-                 "F158": "H158", "F146": "W146", "F213": "K213", "Prism": "SNPrism"}
+from . import band_name_map, roman_tech_repo_path
 
 # effarea_zip_file = os.path.join(
 #     roman_tech_repo_path, 'data/WideFieldInstrument/Imaging/EffectiveAreas/Roman_effarea_tables_20240327.zip')
-effarea_root = os.path.join(roman_tech_repo_path, "data/WideFieldInstrument/Imaging/EffectiveAreas/")
+effarea_root = os.path.join(
+    roman_tech_repo_path, "data/WideFieldInstrument/Imaging/EffectiveAreas/"
+)
 
 
 def get_zodi_bkgnd(ecl_lat, ecl_dlon, lambda_min, lambda_max, Tlambda, T):
@@ -53,7 +51,7 @@ def get_zodi_bkgnd(ecl_lat, ecl_dlon, lambda_min, lambda_max, Tlambda, T):
     # Caveats:
     #   No allowance is made for annual variations (due to tilt of Ecliptic relative to dust midplane)
     #   Range of valid wavelengths = 0.22--2.50 microns (in particlar: neglected thermal emission)
-    deg = np.pi/180.  # /* degrees */
+    deg = np.pi / 180.0  # /* degrees */
     Nlambda = 100  # /* number of integration points in wavelength */
     # /* Sky brightness table: rows are varying ecliptic latitude, cols are varying longitude,
     #  * at the values shown.
@@ -62,6 +60,8 @@ def get_zodi_bkgnd(ecl_lat, ecl_dlon, lambda_min, lambda_max, Tlambda, T):
     #  * Electronic version of Table 17 of Leinert (1997), except for placeholders (1's) at
     #  * elongation <15 degrees (where we should not use this routine anyway!).
     #  */
+
+    # fmt: off
     nlat = 11
     nlon = 19
     betaTable = [0, 5, 10, 15, 20, 25, 30, 45, 60, 75, 90]
@@ -108,29 +108,31 @@ def get_zodi_bkgnd(ecl_lat, ecl_dlon, lambda_min, lambda_max, Tlambda, T):
         1.16500e+02, 1.07324e+02, 9.89669e+01, 9.12134e+01, 8.28880e+01, 7.71064e+01, 7.06245e+01, 6.42367e+01, 5.87697e+01, 5.39387e+01,
         4.98208e+01
     ]
+    # fmt: on
+
     # /* Put longitude between 0 and 180 */
     ecl_dlon = np.abs(ecl_dlon)
-    ecl_dlon -= 360*np.floor(ecl_dlon/360)
-    if (ecl_dlon > 180):
-        ecl_dlon = 360-ecl_dlon
-    if (ecl_dlon > 180):
+    ecl_dlon -= 360 * np.floor(ecl_dlon / 360)
+    if ecl_dlon > 180:
+        ecl_dlon = 360 - ecl_dlon
+    if ecl_dlon > 180:
         ecl_dlon = 180
     # /* Set latitude to be positive */
     ecl_lat = np.abs(ecl_lat)
-    if (ecl_lat > 90):
+    if ecl_lat > 90:
         ecl_lat = 90
     # /* Check wavelength ranges */
     # if (lambda_min<0.22 | lambda_max>2.50):
     #   print("Error: range lambda = %12.5lE .. %12.5lE microns out of range.\n", lambda_min, lambda_max);
     # /* Compute elongation (Sun angle). Complain if <15 degrees. */
-    z = np.cos(ecl_lat*deg)*np.cos(ecl_dlon*deg)
+    z = np.cos(ecl_lat * deg) * np.cos(ecl_dlon * deg)
     if z >= 1:
         elon = 0
     elif z <= -1:
         elon = 180
     else:
-        elon = np.arccos(z)/deg
-    if (elon < 15):
+        elon = np.arccos(z) / deg
+    if elon < 15:
         # print("Error: get_zodi_bkgnd: elongation = " +
         #       str(elon)+" degrees out of valid range.\n")
         return -10
@@ -138,60 +140,82 @@ def get_zodi_bkgnd(ecl_lat, ecl_dlon, lambda_min, lambda_max, Tlambda, T):
     #  * Fit to Table 17 of Leinert (1997).
     #  */
     ilat = 0
-    while betaTable[ilat+1] < ecl_lat and ilat < nlat-2:
+    while betaTable[ilat + 1] < ecl_lat and ilat < nlat - 2:
         ilat += 1
     ilon = 0
-    while dlonTable[ilon+1] < ecl_dlon and ilon < nlon-2:
+    while dlonTable[ilon + 1] < ecl_dlon and ilon < nlon - 2:
         ilon += 1
-    frlat = (ecl_lat-betaTable[ilat])/(betaTable[ilat+1]-betaTable[ilat])
-    frlon = (ecl_dlon-dlonTable[ilon])/(dlonTable[ilon+1]-dlonTable[ilon])
+    frlat = (ecl_lat - betaTable[ilat]) / (
+        betaTable[ilat + 1] - betaTable[ilat]
+    )
+    frlon = (ecl_dlon - dlonTable[ilon]) / (
+        dlonTable[ilon + 1] - dlonTable[ilon]
+    )
     sky05 = np.exp(
-        np.log(skyTable[ilat + (ilon)*nlat]) * (1.-frlat) * (1.-frlon)
-        + np.log(skyTable[ilat + (ilon+1)*nlat]) * (1.-frlat) * (frlon)
-        + np.log(skyTable[ilat+1+(ilon)*nlat]) * (frlat) * (1.-frlon)
-        + np.log(skyTable[ilat+1+(ilon+1)*nlat]) * (frlat) * (frlon)
+        np.log(skyTable[ilat + (ilon) * nlat]) * (1.0 - frlat) * (1.0 - frlon)
+        + np.log(skyTable[ilat + (ilon + 1) * nlat]) * (1.0 - frlat) * (frlon)
+        + np.log(skyTable[ilat + 1 + (ilon) * nlat]) * (frlat) * (1.0 - frlon)
+        + np.log(skyTable[ilat + 1 + (ilon + 1) * nlat]) * (frlat) * (frlon)
     )
     # /* Integrate over wavelengths */
-    zodi_tot = 0.
-    dlambda = (lambda_max-lambda_min)/float(Nlambda)
+    zodi_tot = 0.0
+    dlambda = (lambda_max - lambda_min) / float(Nlambda)
     for ilambda in range(Nlambda):
-        lambda_ = lambda_min + (ilambda+0.5)/Nlambda * (lambda_max-lambda_min)
+        lambda_ = lambda_min + (ilambda + 0.5) / Nlambda * (
+            lambda_max - lambda_min
+        )
         # /* Solar spectrum at this wavelength: F_lambda/F_{0.5um} */
-        index_lambda = 100*np.log(lambda_)/np.log(10.) + 80
+        index_lambda = 100 * np.log(lambda_) / np.log(10.0) + 80
         ilam = int(np.floor(index_lambda))
         frlam = index_lambda - ilam
-        sun_spec = (SolarSpec[ilam] + frlam *
-                    (SolarSpec[ilam+1]-SolarSpec[ilam]))/SolarSpec[50]
+        sun_spec = (
+            SolarSpec[ilam] + frlam * (SolarSpec[ilam + 1] - SolarSpec[ilam])
+        ) / SolarSpec[50]
         # /* Color correction relative to solar */
-        if (lambda_ > 0.5):
+        if lambda_ > 0.5:
             if elon > 90:
-                fco = 1. + (0.6)*np.log(lambda_/0.5)/np.log(10.)
+                fco = 1.0 + (0.6) * np.log(lambda_ / 0.5) / np.log(10.0)
             elif elon < 30:
-                fco = 1. + (0.8)*np.log(lambda_/0.5)/np.log(10.)
+                fco = 1.0 + (0.8) * np.log(lambda_ / 0.5) / np.log(10.0)
             else:
-                fco = 1. + (0.8-0.2*(elon-30)/60.) * \
-                    np.log(lambda_/0.5)/np.log(10.)
+                fco = 1.0 + (0.8 - 0.2 * (elon - 30) / 60.0) * np.log(
+                    lambda_ / 0.5
+                ) / np.log(10.0)
         else:
             if elon > 90:
-                fco = 1. + (0.9)*np.log(lambda_/0.5)/np.log(10.)
+                fco = 1.0 + (0.9) * np.log(lambda_ / 0.5) / np.log(10.0)
             elif elon < 30:
-                fco = 1. + (1.2)*np.log(lambda_/0.5)/np.log(10.)
+                fco = 1.0 + (1.2) * np.log(lambda_ / 0.5) / np.log(10.0)
             else:
-                fco = 1. + (1.2-0.3*(elon-30)/60.) * \
-                    np.log(lambda_/0.5)/np.log(10.)
+                fco = 1.0 + (1.2 - 0.3 * (elon - 30) / 60.0) * np.log(
+                    lambda_ / 0.5
+                ) / np.log(10.0)
         # /* The integral for the zodiacal foreground.
         #  * Here sky05*fco*sun_spec*dlambda is the power per unit area per unit solid angle in this
         #  * wavelength range (Units: 1e-8 W/m^2/sr).
         #  *
         #  * The conversion from 1e-8 W --> photons/sec is 5.03411747e10*lambda(um).
         #  */
-        zodi_tot += sky05 * fco * sun_spec * dlambda * 5.03411747e10 * \
-            lambda_ * np.interp(lambda_, Tlambda, T)
+        zodi_tot += (
+            sky05
+            * fco
+            * sun_spec
+            * dlambda
+            * 5.03411747e10
+            * lambda_
+            * np.interp(lambda_, Tlambda, T)
+        )
     # /* We now have the zodi level in photons/m^2/sr/sec. Convert to photons/m^2/arcsec^2/sec. */
-    return (zodi_tot / 4.2545170296152206e10)
+    return zodi_tot / 4.2545170296152206e10
 
 
-def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=False, SCA_ID=None, **kwargs):
+def getBandpasses(
+    AB_zeropoint=True,
+    default_thin_trunc=True,
+    include_all_bands=False,
+    SCA_ID=None,
+    **kwargs,
+):
     """Utility to get a dictionary containing the Roman ST bandpasses used for imaging.
 
     This routine reads in a file containing a list of wavelengths and throughput for all Roman
@@ -267,41 +291,47 @@ def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=
 
     if SCA_ID is None:
         # Begin by reading in the file containing the info.
-        datafile = os.path.join(meta_data.share_dir, "roman",
-                                "Roman_effarea_20210614.txt")
+        datafile = os.path.join(
+            meta_data.share_dir, "roman", "Roman_effarea_20210614.txt"
+        )
         # One line with the column headings, and the rest as a NumPy array.
         data = np.genfromtxt(datafile, names=True)
     else:
-        sca_id = 'SCA%02d' % (int(SCA_ID))
+        sca_id = "SCA%02d" % (int(SCA_ID))
         # datafile = os.path.join(meta_data.share_dir, "roman", "EffectiveAreas",
         #                         "Roman_effarea_v8_%s_20240301.ecsv" % (sca_id))
 
         # zfile = zipfile.ZipFile(effarea_zip_file, 'r')
         # datafile = zfile.open("Roman_effarea_v8_%s_20240301.ecsv" % (sca_id))
-        datafile = os.path.join(effarea_root, "Roman_effarea_v8_%s_20240301.ecsv" % (sca_id))
+        datafile = os.path.join(
+            effarea_root, "Roman_effarea_v8_%s_20240301.ecsv" % (sca_id)
+        )
         data = ascii.read(datafile)
         for index, bp_name in enumerate(data.dtype.names[1:]):
             if bp_name in band_name_map:
                 data.rename_column(bp_name, band_name_map[bp_name])
 
-    wave = 1000.*data['Wave']
+    wave = 1000.0 * data["Wave"]
     # Read in and manipulate the sky background info.
-    sky_file = os.path.join(meta_data.share_dir, "roman",
-                            "roman_sky_backgrounds.txt")
+    sky_file = os.path.join(
+        meta_data.share_dir, "roman", "roman_sky_backgrounds.txt"
+    )
     sky_data = np.loadtxt(sky_file).transpose()
     ecliptic_lat = sky_data[0, :]
     ecliptic_lon = sky_data[1, :]
 
     # Parse kwargs for truncation, thinning, etc., and check for nonsense.
-    truncate_kwargs = ['blue_limit', 'red_limit', 'relative_throughput']
-    thin_kwargs = ['rel_err', 'trim_zeros', 'preserve_range', 'fast_search']
+    truncate_kwargs = ["blue_limit", "red_limit", "relative_throughput"]
+    thin_kwargs = ["rel_err", "trim_zeros", "preserve_range", "fast_search"]
     tmp_truncate_dict = {}
     tmp_thin_dict = {}
     if default_thin_trunc:
         if len(kwargs) > 0:
-            galsim_warn('default_thin_trunc is true, but other arguments have been passed'
-                        ' to getBandpasses().  Using the other arguments and ignoring'
-                        ' default_thin_trunc.')
+            galsim_warn(
+                "default_thin_trunc is true, but other arguments have been passed"
+                " to getBandpasses().  Using the other arguments and ignoring"
+                " default_thin_trunc."
+            )
             default_thin_trunc = False
     if len(kwargs) > 0:
         for key in list(kwargs.keys()):
@@ -310,7 +340,7 @@ def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=
             if key in thin_kwargs:
                 tmp_thin_dict[key] = kwargs.pop(key)
         if len(kwargs) != 0:
-            raise TypeError("Unknown kwargs: %s" % (' '.join(kwargs.keys())))
+            raise TypeError("Unknown kwargs: %s" % (" ".join(kwargs.keys())))
 
     # Set up a dictionary.
     bandpass_dict = {}
@@ -322,8 +352,10 @@ def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=
         # Initialize the bandpass object.
         # Convert effective area units from m^2 to cm^2.
         # Also divide by the nominal Roman collecting area to get a dimensionless throughput.
-        bp = Bandpass(LookupTable(
-            wave, data[bp_name] * 1.e4/collecting_area), wave_type='nm')
+        bp = Bandpass(
+            LookupTable(wave, data[bp_name] * 1.0e4 / collecting_area),
+            wave_type="nm",
+        )
 
         # Use any arguments related to truncation, thinning, etc.
         if len(tmp_truncate_dict) > 0 or default_thin_trunc:
@@ -333,22 +365,28 @@ def getBandpasses(AB_zeropoint=True, default_thin_trunc=True, include_all_bands=
 
         # Set the zeropoint if requested by the user:
         if AB_zeropoint:
-            bp = bp.withZeropoint('AB')
+            bp = bp.withZeropoint("AB")
 
         # Store the sky level information as an attribute.
         bp._ecliptic_lat = ecliptic_lat
         bp._ecliptic_lon = ecliptic_lon
 
         if SCA_ID is None:
-            bp._sky_level = sky_data[2+index, :]
+            bp._sky_level = sky_data[2 + index, :]
         else:
-            bp._sky_level = np.zeros_like(sky_data[2+index, :])
+            bp._sky_level = np.zeros_like(sky_data[2 + index, :])
             for i in range(len(ecliptic_lat)):
                 bp._sky_level = get_zodi_bkgnd(
-                    ecliptic_lat[i], ecliptic_lon[i], 0.22, 2.5, wave/1000., data[bp_name])
+                    ecliptic_lat[i],
+                    ecliptic_lon[i],
+                    0.22,
+                    2.5,
+                    wave / 1000.0,
+                    data[bp_name],
+                )
 
         # Add it to the dictionary.
-        bp.name = bp_name if bp_name != 'W149' else 'W146'
+        bp.name = bp_name if bp_name != "W149" else "W146"
         bandpass_dict[bp.name] = bp
 
     return bandpass_dict

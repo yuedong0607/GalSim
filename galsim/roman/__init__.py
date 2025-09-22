@@ -28,17 +28,30 @@ from astropy.time import Time
 
 from .. import Image, meta_data
 
-roman_tech_repo_path = "/hpc/home/yf194/Work/projects/roman-technical-information/"
+roman_tech_repo_path = (
+    "/hpc/home/yf194/Work/projects/roman-technical-information/"
+)
 FPSPerformance_path = os.path.join(
     roman_tech_repo_path, "data", "WideFieldInstrument", "FPSPerformance"
 )
 
 # Summary files for Roman/WFI Focal Plane System (FPS) Sensor Chip Assembly (SCA) Performance Measurements
 CDS_summary = os.path.join(FPSPerformance_path, "WFI_CDS_Noise_summary.ecsv")
+
 dark_current_summary = os.path.join(
     FPSPerformance_path, "WFI_Dark_current_summary.ecsv"
 )
-persistence_summary = os.path.join(FPSPerformance_path, "WFI_Persistence_summary.ecsv")
+thermal_backgrounds_summary = os.path.join(
+    roman_tech_repo_path,
+    "data",
+    "WideFieldInstrument",
+    "Imaging",
+    "Backgrounds",
+    "internal_thermal_backgrounds.ecsv",
+)
+persistence_summary = os.path.join(
+    FPSPerformance_path, "WFI_Persistence_summary.ecsv"
+)
 persistence_exp_fits_summary = os.path.join(
     FPSPerformance_path, "WFI_Persistence_exp_fits.ecsv"
 )
@@ -67,10 +80,21 @@ nborder = 4  # number of border pixels used for reference pixels.
 try:
     data = ascii.read(dark_current_summary)
     dark_current = data[18]["Dark Current - Median"]
-except:
+except RuntimeError as e:
     print(
-        "Failed to fetch WFI_Dark_current_summary.ecsv, use default value for dark_current"
+        f" {e} Failed to fetch WFI_Dark_current_summary.ecsv, use default value for dark_current"
     )
+
+band_name_map = {
+    "F062": "R062",
+    "F087": "Z087",
+    "F106": "Y106",
+    "F129": "J129",
+    "F158": "H158",
+    "F146": "W146",
+    "F213": "K213",
+    "Prism": "SNPrism",
+}
 
 # These are from https://roman.gsfc.nasa.gov/science/WFI_technical.html, as of October, 2023
 thermal_backgrounds = {
@@ -87,6 +111,20 @@ thermal_backgrounds = {
     "Grism_1stOrder": 0.00,
 }
 
+try:
+    data = ascii.read(thermal_backgrounds_summary)
+    for i in range(len(data["filter"])):
+        band_name = (
+            band_name_map[data["filter"][i]]
+            if data["filter"][i] in band_name_map
+            else data["filter"][i]
+        )
+        thermal_backgrounds[band_name] = data[i]["rate"]
+except RuntimeError as e:
+    print(
+        f" {e} Failed to fetch internal_thermal_backgrounds.ecsv, use default value for thermal_backgrounds"
+    )
+
 # Physical pixel size
 pixel_scale_mm = 0.01  # mm
 
@@ -96,7 +134,9 @@ pixel_scale_mm = 0.01  # mm
 # filter.  This file is for SCA2, which is near the center and for short wavelengths, so in
 # some sense the most typical example of the pupil mask.  If anyone needs a generic pupil
 # plane file to use, this one should be fine.
-pupil_plane_file = os.path.join(meta_data.share_dir, "roman", "SCA2_rim_mask.fits.gz")
+pupil_plane_file = os.path.join(
+    meta_data.share_dir, "roman", "SCA2_rim_mask.fits.gz"
+)
 
 # The pupil plane files all keep track of their correct pixel scale, but for the exit pupil,
 # rather than the input pupil.  The scaling to use to get to the entrance pupil, which is what
@@ -150,7 +190,9 @@ persistence_coefficients = (
 # parameters in the fermi model = [ A, x0, dx, a, r, half_well]
 # The following parameters are for H4RG-lo, the conservative model for low influence level x.
 # The info and implementation can be found in roman_detectors.applyPersistence() and roman_detectors.fermi_linear().
-persistence_fermi_parameters = np.array([0.017, 60000.0, 50000.0, 0.045, 1.0, 50000.0])
+persistence_fermi_parameters = np.array(
+    [0.017, 60000.0, 50000.0, 0.045, 1.0, 50000.0]
+)
 
 n_sca = 18
 n_pix_tot = 4096
@@ -480,21 +522,23 @@ default_parameters_dictionary = {
     },
 }
 
-from .roman_gain import Gain
-from .roman_dark_current import DarkCurrent
-from .roman_nonlinarity import Nonlinearity
-from .roman_saturation import Saturation
-from .roman_read_noise import ReadNoise
 from .roman_backgrounds import getSkyLevel
 from .roman_bandpass import getBandpasses
+from .roman_dark_current import DarkCurrent
 from .roman_detectors import (
-    applyNonlinearity,
-    addReciprocityFailure,
-    applyIPC,
-    applyPersistence,
-    allDetectorEffects,
     NLfunc,
+    addReciprocityFailure,
+    allDetectorEffects,
+    applyIPC,
+    applyNonlinearity,
+    applyPersistence,
 )
+from .roman_gain import Gain
+from .roman_ipc import IPC
+from .roman_nonlinarity import Nonlinearity
 from .roman_psfs import getPSF
+from .roman_read_noise import ReadNoise
+from .roman_saturation import Saturation
 from .roman_wcs import allowedPos, bestPA, convertCenter, findSCA, getWCS
-from . import roman_config
+
+from . import roman_config  # isort: skip
