@@ -23,6 +23,7 @@ Space Telescope.
 import os
 
 import numpy as np
+
 from astropy.io import ascii
 from astropy.time import Time
 
@@ -36,7 +37,7 @@ FPSPerformance_path = os.path.join(
 )
 
 # Summary files for Roman/WFI Focal Plane System (FPS) Sensor Chip Assembly (SCA) Performance Measurements
-CDS_summary = os.path.join(FPSPerformance_path, "WFI_CDS_Noise_summary.ecsv")
+# CDS_summary = os.path.join(FPSPerformance_path, "WFI_CDS_Noise_summary.ecsv")
 
 dark_current_summary = os.path.join(
     FPSPerformance_path, "WFI_Dark_current_summary.ecsv"
@@ -55,11 +56,11 @@ persistence_summary = os.path.join(
 persistence_exp_fits_summary = os.path.join(
     FPSPerformance_path, "WFI_Persistence_exp_fits.ecsv"
 )
-pixel_meet_requirements_summary = os.path.join(
-    FPSPerformance_path, "WFI_Pixels_meet_requirements.ecsv"
-)
-QE_summary = os.path.join(FPSPerformance_path, "WFI_Quantum_efficiency.ecsv")
-total_noise_summary = os.path.join(FPSPerformance_path, "WFI_Total_noise.ecsv")
+# pixel_meet_requirements_summary = os.path.join(
+#     FPSPerformance_path, "WFI_Pixels_meet_requirements.ecsv"
+# )
+# QE_summary = os.path.join(FPSPerformance_path, "WFI_Quantum_efficiency.ecsv")
+# total_noise_summary = os.path.join(FPSPerformance_path, "WFI_Total_noise.ecsv")
 
 gain = 1.0
 pixel_scale = 0.11  # arcsec / pixel
